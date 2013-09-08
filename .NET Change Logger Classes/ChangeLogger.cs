@@ -8,6 +8,7 @@ namespace W3Developments.Auditor
     {
         private Object _MainObject { get; set; }
         public Object MainObject { get { return _MainObject; } }
+        public PropertyInfo ParentProperty { get; set; }
         public IList<ChangeLog> Changes { get; set; }
         public ChangeLoggerGlobal(Object mainObject)
         {
@@ -54,14 +55,16 @@ namespace W3Developments.Auditor
             this.Id = id;
             this.X = original;
             this.Y = changed;
-            GlobalSettings = new ChangeLoggerGlobal(original);
+            this.GlobalSettings = new ChangeLoggerGlobal(original);
+            this.GlobalSettings.ParentProperty = null;
         }
-        private ChangeLogger(Int64 id, ChangeLoggerGlobal globalSettings, Object original, Object changed)
+        private ChangeLogger(Int64 id, ChangeLoggerGlobal globalSettings, PropertyInfo parentProperty, Object original, Object changed)
         {
             this.Id = id;
             this.X = original;
             this.Y = changed;
             this.GlobalSettings = globalSettings;
+            this.GlobalSettings.ParentProperty = parentProperty;
         }
 
         /// <summary>
@@ -83,7 +86,7 @@ namespace W3Developments.Auditor
                         }
                         else
                         {
-                            ChangeLogger logger = new ChangeLogger(this.Id, GlobalSettings, PI.GetValue(X, null), PI.GetValue(Y, null));
+                            ChangeLogger logger = new ChangeLogger(this.Id, GlobalSettings, PI, PI.GetValue(X, null), PI.GetValue(Y, null));
                             logger.Audit();
                         }
                     }
@@ -145,19 +148,19 @@ namespace W3Developments.Auditor
             if (valx == null && valy == null) return;
             if (valx == null && valy != null)
             {
-                log = new ChangeLog(GlobalSettings.MainObject.GetType().Name, Id, ((GlobalSettings.MainObject.GetType()==X.GetType()) ? string.Empty : typePI.Type.Name + ":") + typePI.PropertyInfo.Name, string.Empty, valy.ToString());
+                log = new ChangeLog(GlobalSettings.MainObject.GetType().Name, Id, ((GlobalSettings.MainObject.GetType()==X.GetType()) ? string.Empty : GlobalSettings.ParentProperty.Name + ":") + typePI.PropertyInfo.Name, string.Empty, valy.ToString());
                 GlobalSettings.Changes.Add(log);
             }
             else if (valx != null && valy == null)
             {
-                log = new ChangeLog(GlobalSettings.MainObject.GetType().Name, Id, ((GlobalSettings.MainObject.GetType() == X.GetType()) ? string.Empty : typePI.Type.Name + ":") + typePI.PropertyInfo.Name, valx.ToString(), string.Empty);
+                log = new ChangeLog(GlobalSettings.MainObject.GetType().Name, Id, ((GlobalSettings.MainObject.GetType() == X.GetType()) ? string.Empty : GlobalSettings.ParentProperty.Name + ":") + typePI.PropertyInfo.Name, valx.ToString(), string.Empty);
                 GlobalSettings.Changes.Add(log);
             }
             else
             {
                 if (valx.CompareTo(valy) != 0)
                 {
-                    log = new ChangeLog(GlobalSettings.MainObject.GetType().Name, Id, ((GlobalSettings.MainObject.GetType() == X.GetType()) ? string.Empty : typePI.Type.Name + ":") + typePI.PropertyInfo.Name, valx.ToString(), valy.ToString());
+                    log = new ChangeLog(GlobalSettings.MainObject.GetType().Name, Id, ((GlobalSettings.MainObject.GetType() == X.GetType()) ? string.Empty : GlobalSettings.ParentProperty.Name + ":") + typePI.PropertyInfo.Name, valx.ToString(), valy.ToString());
                     GlobalSettings.Changes.Add(log);
                 }
             }
@@ -165,18 +168,31 @@ namespace W3Developments.Auditor
 
     }
 
+    /// <summary>
+    /// Class to hold a Type and Object Info pair
+    /// </summary>
     public class TypePropertyInfoPair
     {
         internal Type Type { get; set; }
         internal PropertyInfo PropertyInfo { get; set; }
         private FieldInfo FieldInfo { get; set; }
 
+        /// <summary>
+        /// Create a new instanceof TypePropertyInfo for FieldInfo
+        /// </summary>
+        /// <param name="type">The object type</param>
+        /// <param name="fieldInfo">The FieldInfo</param>
         public TypePropertyInfoPair(Type type, FieldInfo fieldInfo)
         {
             this.Type = type;
             this.FieldInfo = fieldInfo;
         }
 
+        /// <summary>
+        /// Create a new instanceof TypePropertyInfo for PropertyInfo
+        /// </summary>
+        /// <param name="type">The object type</param>
+        /// <param name="propertyInfo">The PropertyInfo</param>
         public TypePropertyInfoPair(Type type, PropertyInfo propertyInfo)
         {
             this.Type = type;
