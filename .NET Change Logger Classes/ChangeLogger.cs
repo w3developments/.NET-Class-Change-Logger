@@ -59,8 +59,8 @@ namespace W3Developments.Auditor
         private ChangeLogger(Int64 id, ChangeLoggerGlobal globalSettings, Object original, Object changed)
         {
             this.Id = id;
-            this.X = changed;
-            this.Y = original;
+            this.X = original;
+            this.Y = changed;
             this.GlobalSettings = globalSettings;
         }
 
@@ -83,7 +83,7 @@ namespace W3Developments.Auditor
                         }
                         else
                         {
-                            ChangeLogger logger = new ChangeLogger(this.Id, GlobalSettings, PI.GetValue(Y, null), PI.GetValue(X, null));
+                            ChangeLogger logger = new ChangeLogger(this.Id, GlobalSettings, PI.GetValue(X, null), PI.GetValue(Y, null));
                             logger.Audit();
                         }
                     }
