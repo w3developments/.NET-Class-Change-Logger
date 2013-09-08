@@ -52,8 +52,8 @@ namespace W3Developments.Auditor
                 return;
             }
             this.Id = id;
-            this.X = changed;
-            this.Y = original;
+            this.X = original;
+            this.Y = changed;
             GlobalSettings = new ChangeLoggerGlobal(original);
         }
         private ChangeLogger(Int64 id, ChangeLoggerGlobal globalSettings, Object original, Object changed)
