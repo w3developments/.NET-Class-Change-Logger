@@ -8,7 +8,7 @@ namespace W3Developments.Auditor
     {
         private Object _MainObject { get; set; }
         public Object MainObject { get { return _MainObject; } }
-        public PropertyInfo ParentProperty { get; set; }
+        public IList<PropertyInfo> PropertyChain { get; set; }
         public IList<ChangeLog> Changes { get; set; }
         public ChangeLoggerGlobal(Object mainObject)
         {
@@ -56,7 +56,7 @@ namespace W3Developments.Auditor
             this.X = original;
             this.Y = changed;
             this.GlobalSettings = new ChangeLoggerGlobal(original);
-            this.GlobalSettings.ParentProperty = null;
+            this.GlobalSettings.PropertyChain = new List<PropertyInfo>();
         }
         private ChangeLogger(Int64 id, ChangeLoggerGlobal globalSettings, PropertyInfo parentProperty, Object original, Object changed)
         {
@@ -64,7 +64,7 @@ namespace W3Developments.Auditor
             this.X = original;
             this.Y = changed;
             this.GlobalSettings = globalSettings;
-            this.GlobalSettings.ParentProperty = parentProperty;
+            this.GlobalSettings.PropertyChain.Add(parentProperty);
         }
 
         /// <summary>
@@ -86,10 +86,11 @@ namespace W3Developments.Auditor
                         }
                         else
                         {
-                            ChangeLogger logger = new ChangeLogger(this.Id, GlobalSettings, PI, PI.GetValue(X, null), PI.GetValue(Y, null));
+                            ChangeLogger logger = new ChangeLogger(this.Id, this.GlobalSettings, PI, PI.GetValue(X, null), PI.GetValue(Y, null));
                             logger.Audit();
                         }
                     }
+                    if (this.GlobalSettings.PropertyChain.Count > 0 && propertyList[(propertyList.Length - 1)] == PI) this.GlobalSettings.PropertyChain.RemoveAt((this.GlobalSettings.PropertyChain.Count - 1));
                 }
             }
             catch (Exception ex)
@@ -144,23 +145,28 @@ namespace W3Developments.Auditor
             IComparable valx = typePI.PropertyInfo.GetValue(X, null) as IComparable;
             var valy = typePI.PropertyInfo.GetValue(Y, null);
             ChangeLog log;
+            string propertyChain = string.Empty;
+            foreach (PropertyInfo PI in this.GlobalSettings.PropertyChain)
+            {
+                propertyChain = string.Concat(propertyChain, PI.Name, ":");
+            }
             
             if (valx == null && valy == null) return;
             if (valx == null && valy != null)
             {
-                log = new ChangeLog(GlobalSettings.MainObject.GetType().Name, Id, ((GlobalSettings.MainObject.GetType()==X.GetType()) ? string.Empty : GlobalSettings.ParentProperty.Name + ":") + typePI.PropertyInfo.Name, string.Empty, valy.ToString());
+                log = new ChangeLog(GlobalSettings.MainObject.GetType().Name, Id, ((GlobalSettings.MainObject.GetType()==X.GetType()) ? string.Empty : propertyChain) + typePI.PropertyInfo.Name, string.Empty, valy.ToString());
                 GlobalSettings.Changes.Add(log);
             }
             else if (valx != null && valy == null)
             {
-                log = new ChangeLog(GlobalSettings.MainObject.GetType().Name, Id, ((GlobalSettings.MainObject.GetType() == X.GetType()) ? string.Empty : GlobalSettings.ParentProperty.Name + ":") + typePI.PropertyInfo.Name, valx.ToString(), string.Empty);
+                log = new ChangeLog(GlobalSettings.MainObject.GetType().Name, Id, ((GlobalSettings.MainObject.GetType() == X.GetType()) ? string.Empty : propertyChain) + typePI.PropertyInfo.Name, valx.ToString(), string.Empty);
                 GlobalSettings.Changes.Add(log);
             }
             else
             {
                 if (valx.CompareTo(valy) != 0)
                 {
-                    log = new ChangeLog(GlobalSettings.MainObject.GetType().Name, Id, ((GlobalSettings.MainObject.GetType() == X.GetType()) ? string.Empty : GlobalSettings.ParentProperty.Name + ":") + typePI.PropertyInfo.Name, valx.ToString(), valy.ToString());
+                    log = new ChangeLog(GlobalSettings.MainObject.GetType().Name, Id, ((GlobalSettings.MainObject.GetType() == X.GetType()) ? string.Empty : propertyChain) + typePI.PropertyInfo.Name, valx.ToString(), valy.ToString());
                     GlobalSettings.Changes.Add(log);
                 }
             }
